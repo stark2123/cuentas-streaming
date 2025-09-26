@@ -6,26 +6,89 @@ let editingId = null;
 let PLATFORMS = [];
 let activePlatformFilter = 'ALL';
 
-// ========== FUNCIONES DE DATOS ==========
-function loadData() {
+// ========== FUNCIONES DE SINCRONIZACIÓN EN LA NUBE ==========
+async function loadDataFromCloud() {
+    try {
+        const response = await fetch('/api/data');
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                PLATFORMS = result.platforms || [];
+                subscriptions = result.subscriptions || [];
+                console.log('✅ Datos cargados de la nube:', { platforms: PLATFORMS.length, subscriptions: subscriptions.length });
+                return true;
+            }
+        }
+        console.log('❌ Error al cargar datos de la nube');
+        return false;
+    } catch (error) {
+        console.log('❌ Error de conexión:', error);
+        return false;
+    }
+}
+
+async function saveDataToCloud() {
+    try {
+        const response = await fetch('/api/data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                platforms: PLATFORMS,
+                subscriptions: subscriptions
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                console.log('✅ Datos sincronizados en la nube');
+                return true;
+            }
+        }
+        console.log('❌ Error al sincronizar en la nube');
+        return false;
+    } catch (error) {
+        console.log('❌ Error de conexión al sincronizar:', error);
+        return false;
+    }
+}
+
+// ========== FUNCIONES DE DATOS LOCALES (RESPALDO) ==========
+function loadDataFromLocal() {
     try {
         PLATFORMS = JSON.parse(localStorage.getItem('platforms') || '[]');
         subscriptions = JSON.parse(localStorage.getItem('subscriptions') || '[]');
-        console.log('✅ Datos cargados:', { platforms: PLATFORMS.length, subscriptions: subscriptions.length });
+        console.log('✅ Datos cargados localmente:', { platforms: PLATFORMS.length, subscriptions: subscriptions.length });
     } catch (error) {
-        console.log('❌ Error al cargar datos:', error);
+        console.log('❌ Error al cargar datos locales:', error);
         PLATFORMS = [];
         subscriptions = [];
     }
 }
 
-function saveData() {
+function saveDataToLocal() {
     try {
         localStorage.setItem('platforms', JSON.stringify(PLATFORMS));
         localStorage.setItem('subscriptions', JSON.stringify(subscriptions));
-        console.log('✅ Datos guardados');
+        console.log('✅ Datos guardados localmente');
     } catch (error) {
-        console.log('❌ Error al guardar datos:', error);
+        console.log('❌ Error al guardar datos locales:', error);
+    }
+}
+
+// ========== FUNCIONES DE SINCRONIZACIÓN MANUAL ==========
+async function syncToCloud() {
+    try {
+        const success = await saveDataToCloud();
+        if (success) {
+            alert('✅ Datos sincronizados en la nube');
+        } else {
+            alert('❌ Error al sincronizar en la nube');
+        }
+    } catch (error) {
+        alert('❌ Error de conexión: ' + error.message);
     }
 }
 
@@ -501,8 +564,9 @@ async function saveSubscription() {
         alert('Suscripción creada correctamente');
     }
     
-    // Guardar datos
-    saveData();
+    // Guardar datos en la nube y localmente
+    await saveDataToCloud();
+    saveDataToLocal();
     
     renderPlatformSubtabs();
     renderPlatforms();
@@ -526,8 +590,9 @@ async function savePlatform() {
     platformData.id = Date.now().toString();
     PLATFORMS.push(platformData);
     
-    // Guardar datos
-    saveData();
+    // Guardar datos en la nube y localmente
+    await saveDataToCloud();
+    saveDataToLocal();
     
     closePlatformModal();
     renderPlatformSubtabs();
@@ -536,19 +601,26 @@ async function savePlatform() {
 }
 
 // ========== INICIALIZACIÓN ==========
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Aplicación iniciada');
     
-    // Cargar datos
-    loadData();
+    // Intentar cargar datos de la nube
+    let cloudLoaded = await loadDataFromCloud();
     
-    // Si no hay datos, usar datos de ejemplo
+    // Si no se pudieron cargar de la nube, cargar localmente
+    if (!cloudLoaded) {
+        loadDataFromLocal();
+    }
+    
+    // Si no hay datos en ningún lado, usar datos de ejemplo
     if (PLATFORMS.length === 0 && subscriptions.length === 0) {
         PLATFORMS = [
             { id: '1', name: 'NETFLIX', email: 'ejemplo@netflix.com', password: 'password123', profiles: '5' }
         ];
         subscriptions = [];
-        saveData();
+        // Guardar en la nube y localmente
+        await saveDataToCloud();
+        saveDataToLocal();
         console.log('📝 Usando datos de ejemplo');
     }
     
