@@ -6,7 +6,7 @@ let editingId = null;
 let PLATFORMS = [];
 let activePlatformFilter = 'ALL';
 
-// ========== FUNCIONES DE SINCRONIZACIÓN EN LA NUBE ==========
+// ========== FUNCIONES DE NUBE ==========
 async function loadDataFromCloud() {
     try {
         const response = await fetch('/api/data');
@@ -43,19 +43,19 @@ async function saveDataToCloud() {
         if (response.ok) {
             const result = await response.json();
             if (result.success) {
-                console.log('✅ Datos sincronizados en la nube');
+                console.log('✅ Datos guardados en la nube');
                 return true;
             }
         }
-        console.log('❌ Error al sincronizar en la nube');
+        console.log('❌ Error al guardar en la nube');
         return false;
     } catch (error) {
-        console.log('❌ Error de conexión al sincronizar:', error);
+        console.log('❌ Error de conexión:', error);
         return false;
     }
 }
 
-// ========== FUNCIONES DE DATOS LOCALES (RESPALDO) ==========
+// ========== FUNCIONES LOCALES (RESPALDO) ==========
 function loadDataFromLocal() {
     try {
         PLATFORMS = JSON.parse(localStorage.getItem('platforms') || '[]');
