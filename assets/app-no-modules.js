@@ -8,6 +8,9 @@ let PLATFORMS = [];
 let activePlatformFilter = 'ALL';
 let useAPI = true; // Flag para usar API o localStorage
 
+// Detectar si estamos en Vercel
+const isVercel = window.location.hostname.includes('vercel.app') || window.location.hostname.includes('vercel.com');
+
 // ========== CONFIGURACIÓN DE API ==========
 const API_BASE_URL = window.location.origin + '/api';
 
@@ -184,8 +187,21 @@ async function migrateLocalData() {
 
 // ========== SEGURIDAD ==========
 async function checkSecurity() {
+    // Si estamos en Vercel, SIEMPRE usar API
+    if (isVercel) {
+        useAPI = true;
+        console.log('🌐 Detectado Vercel - Usando modo servidor');
+        
+        const sessionVerified = sessionStorage.getItem('password_verified');
+        if (!sessionVerified) {
+            showPasswordLogin();
+            return false;
+        }
+        return true;
+    }
+    
+    // Modo local - verificar si hay servidor
     try {
-        // Intentar verificar si el servidor está configurado
         const response = await fetch('/api/security/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -438,14 +454,16 @@ async function loadData() {
             subscriptions = await getSubscriptions();
             console.log('✅ Datos cargados del servidor:', { platforms: PLATFORMS.length, subscriptions: subscriptions.length });
             
-            // Intentar migrar datos locales si es la primera vez
-            try {
-                await migrateLocalData();
-                // Recargar datos después de migración
-                PLATFORMS = await getPlatforms();
-                subscriptions = await getSubscriptions();
-            } catch (migrationError) {
-                console.log('ℹ️ No hay datos locales para migrar o ya están migrados');
+            // Solo migrar datos locales si NO estamos en Vercel
+            if (!isVercel) {
+                try {
+                    await migrateLocalData();
+                    // Recargar datos después de migración
+                    PLATFORMS = await getPlatforms();
+                    subscriptions = await getSubscriptions();
+                } catch (migrationError) {
+                    console.log('ℹ️ No hay datos locales para migrar o ya están migrados');
+                }
             }
         } else {
             // Cargar datos locales
