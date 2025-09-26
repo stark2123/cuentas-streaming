@@ -1,18 +1,12 @@
-// ========== APLICACIÓN COMPLETA PARA VERCEL ==========
+// ========== APLICACIÓN CUENTAS STREAMING ==========
 
 // Variables globales
 let subscriptions = [];
 let editingId = null;
 let PLATFORMS = [];
-let activePlatformFilter = 'ALL';
-let useAPI = true;
-
-// Detectar Vercel
-const isVercel = window.location.hostname.includes('vercel.app') || window.location.hostname.includes('vercel.com');
 
 // ========== FUNCIONES BÁSICAS ==========
 function openPlatformModal() {
-    console.log('Abriendo modal de plataformas');
     document.getElementById('platformModal').style.display = 'block';
 }
 
@@ -21,7 +15,6 @@ function closePlatformModal() {
 }
 
 function exportData() {
-    console.log('Exportando datos');
     const dataStr = JSON.stringify(subscriptions, null, 2);
     const dataBlob = new Blob([dataStr], {type: 'application/json'});
     const url = URL.createObjectURL(dataBlob);
@@ -33,7 +26,6 @@ function exportData() {
 }
 
 function importData() {
-    console.log('Importando datos');
     document.getElementById('fileInput').click();
 }
 
@@ -114,15 +106,21 @@ function renderPlatforms() {
         const availableProfiles = totalProfiles - usedProfiles;
         return `
             <div class="platform-card">
-                <div class="subscription-header">
+                <div class="card-header">
                     <div class="service-name">${platform.name}</div>
                     <div class="days-badge days-positive">${usedProfiles}/${totalProfiles} perfiles</div>
                 </div>
-                <div class="subscription-details">
-                    <div class="detail-item"><div class="detail-label">Correo</div><div class="detail-value">${platform.email}</div></div>
-                    <div class="detail-item"><div class="detail-label">Disponibles</div><div class="detail-value">${availableProfiles}</div></div>
+                <div class="card-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Correo</div>
+                        <div class="detail-value">${platform.email}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Disponibles</div>
+                        <div class="detail-value">${availableProfiles}</div>
+                    </div>
                 </div>
-                <div class="subscription-actions">
+                <div class="card-actions">
                     <button class="btn btn-primary" onclick="openAddModal('${platform.id}')">➕ Agregar Cliente</button>
                     <button class="btn btn-secondary" onclick="editPlatform('${platform.id}')">✏️ Editar</button>
                     <button class="btn btn-danger" onclick="deletePlatform('${platform.id}')">🗑️ Eliminar</button>
@@ -141,16 +139,33 @@ function renderSubscriptions() {
         const daysRemaining = calculateDaysRemaining(sub.endDate);
         const daysClass = daysRemaining < 0 ? 'days-danger' : daysRemaining <= 3 ? 'days-warning' : 'days-positive';
         return `
-            <div class="compact-card">
-                <div class="compact-info">
-                    <div class="compact-title">${sub.service} • Perfil ${sub.profileNumber}</div>
-                    <div class="compact-subtitle">${sub.clientName}${sub.pin ? ` • PIN: ${sub.pin}` : ''} • Inicia: ${formatDate(sub.startDate)} • Finaliza: ${formatDate(sub.endDate)}</div>
+            <div class="subscription-card">
+                <div class="card-header">
+                    <div class="service-name">${sub.service} • Perfil ${sub.profileNumber}</div>
+                    <div class="days-badge ${daysClass}">${daysRemaining} días</div>
                 </div>
-                <div class="compact-actions">
-                    <span class="days-badge ${daysClass}" style="font-size: 11px; padding: 3px 6px; margin-right: 6px;">${daysRemaining} días</span>
-                    <button class="compact-btn compact-btn-primary" onclick="editSubscription(${sub.id})">✏️ Editar</button>
-                    <button class="compact-btn compact-btn-success" onclick="sendWhatsApp(${sub.id})">📱 WhatsApp</button>
-                    <button class="compact-btn compact-btn-danger" onclick="deleteSubscription(${sub.id})">🗑️ Eliminar</button>
+                <div class="card-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Cliente</div>
+                        <div class="detail-value">${sub.clientName}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Correo</div>
+                        <div class="detail-value">${sub.accountEmail}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Inicio</div>
+                        <div class="detail-value">${formatDate(sub.startDate)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Finaliza</div>
+                        <div class="detail-value">${formatDate(sub.endDate)}</div>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-primary" onclick="editSubscription(${sub.id})">✏️ Editar</button>
+                    <button class="btn btn-success" onclick="sendWhatsApp(${sub.id})">📱 WhatsApp</button>
+                    <button class="btn btn-danger" onclick="deleteSubscription(${sub.id})">🗑️ Eliminar</button>
                 </div>
             </div>`;
     }).join('');
@@ -171,7 +186,6 @@ function formatDate(dateString) {
 
 // ========== FUNCIONES COMPLETAS ==========
 function openAddModal(platformId = null) {
-    console.log('Abriendo modal para agregar');
     editingId = null;
     document.getElementById('modalTitle').textContent = 'Nueva Cuenta';
     document.getElementById('subscriptionForm').reset();
@@ -186,7 +200,6 @@ function openAddModal(platformId = null) {
 }
 
 function editPlatform(platformId) {
-    console.log('Editando plataforma:', platformId);
     const platform = PLATFORMS.find(p => p.id === platformId);
     if (!platform) return;
     document.getElementById('platformName').value = platform.name;
@@ -217,7 +230,6 @@ function updatePlatform(platformId) {
 }
 
 function deletePlatform(platformId) {
-    console.log('Eliminando plataforma:', platformId);
     if (confirm('¿Estás seguro de eliminar esta plataforma?')) {
         PLATFORMS = PLATFORMS.filter(p => p.id !== platformId);
         subscriptions = subscriptions.filter(sub => sub.platformId !== platformId);
@@ -228,7 +240,6 @@ function deletePlatform(platformId) {
 }
 
 function editSubscription(id) {
-    console.log('Editando suscripción:', id);
     const sub = subscriptions.find(s => s.id === id);
     if (!sub) return;
     editingId = id;
@@ -247,7 +258,6 @@ function editSubscription(id) {
 }
 
 function deleteSubscription(id) {
-    console.log('Eliminando suscripción:', id);
     if (confirm('¿Estás seguro de eliminar esta suscripción?')) {
         subscriptions = subscriptions.filter(s => s.id !== id);
         renderSubscriptions();
@@ -256,7 +266,6 @@ function deleteSubscription(id) {
 }
 
 function sendWhatsApp(id) {
-    console.log('Enviando WhatsApp:', id);
     const sub = subscriptions.find(s => s.id === id);
     if (!sub) return;
     const message = `*¡Gracias por tu compra!* 🎉\n\nYa tienes acceso a tu pantalla de:\n\n📺 *${sub.service.toUpperCase()}*.\n\n🔑 *Datos de acceso:*\n• 📧 *Correo:* ${sub.accountEmail}\n• 🔐 *Contraseña:* ${sub.accountPassword}\n• 👤 *Perfil:* ${sub.profileNumber}\n${sub.pin ? `• 🔢 *PIN:* ${sub.pin}\n` : ''}\n\nCualquier duda, estoy para ayudarte 🙌 ¡Que disfrutes!`;
@@ -320,7 +329,6 @@ function savePlatform() {
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Aplicación iniciada');
-    console.log('🌐 Vercel detectado:', isVercel);
     
     // Cargar datos de ejemplo
     PLATFORMS = [
@@ -372,15 +380,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 const availableProfiles = totalProfiles - usedProfiles;
                 return `
                     <div class="platform-card">
-                        <div class="subscription-header">
+                        <div class="card-header">
                             <div class="service-name">${platform.name}</div>
                             <div class="days-badge days-positive">${usedProfiles}/${totalProfiles} perfiles</div>
                         </div>
-                        <div class="subscription-details">
-                            <div class="detail-item"><div class="detail-label">Correo</div><div class="detail-value">${platform.email}</div></div>
-                            <div class="detail-item"><div class="detail-label">Disponibles</div><div class="detail-value">${availableProfiles}</div></div>
+                        <div class="card-details">
+                            <div class="detail-item">
+                                <div class="detail-label">Correo</div>
+                                <div class="detail-value">${platform.email}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Disponibles</div>
+                                <div class="detail-value">${availableProfiles}</div>
+                            </div>
                         </div>
-                        <div class="subscription-actions">
+                        <div class="card-actions">
                             <button class="btn btn-primary" onclick="openAddModal('${platform.id}')">➕ Agregar Cliente</button>
                             <button class="btn btn-secondary" onclick="editPlatform('${platform.id}')">✏️ Editar</button>
                             <button class="btn btn-danger" onclick="deletePlatform('${platform.id}')">🗑️ Eliminar</button>
@@ -392,16 +406,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 const daysRemaining = calculateDaysRemaining(sub.endDate);
                 const daysClass = daysRemaining < 0 ? 'days-danger' : daysRemaining <= 3 ? 'days-warning' : 'days-positive';
                 return `
-                    <div class="compact-card">
-                        <div class="compact-info">
-                            <div class="compact-title">${sub.service} • Perfil ${sub.profileNumber}</div>
-                            <div class="compact-subtitle">${sub.clientName}${sub.pin ? ` • PIN: ${sub.pin}` : ''} • Inicia: ${formatDate(sub.startDate)} • Finaliza: ${formatDate(sub.endDate)}</div>
+                    <div class="subscription-card">
+                        <div class="card-header">
+                            <div class="service-name">${sub.service} • Perfil ${sub.profileNumber}</div>
+                            <div class="days-badge ${daysClass}">${daysRemaining} días</div>
                         </div>
-                        <div class="compact-actions">
-                            <span class="days-badge ${daysClass}" style="font-size: 11px; padding: 3px 6px; margin-right: 6px;">${daysRemaining} días</span>
-                            <button class="compact-btn compact-btn-primary" onclick="editSubscription(${sub.id})">✏️ Editar</button>
-                            <button class="compact-btn compact-btn-success" onclick="sendWhatsApp(${sub.id})">📱 WhatsApp</button>
-                            <button class="compact-btn compact-btn-danger" onclick="deleteSubscription(${sub.id})">🗑️ Eliminar</button>
+                        <div class="card-details">
+                            <div class="detail-item">
+                                <div class="detail-label">Cliente</div>
+                                <div class="detail-value">${sub.clientName}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Correo</div>
+                                <div class="detail-value">${sub.accountEmail}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Inicio</div>
+                                <div class="detail-value">${formatDate(sub.startDate)}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Finaliza</div>
+                                <div class="detail-value">${formatDate(sub.endDate)}</div>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn btn-primary" onclick="editSubscription(${sub.id})">✏️ Editar</button>
+                            <button class="btn btn-success" onclick="sendWhatsApp(${sub.id})">📱 WhatsApp</button>
+                            <button class="btn btn-danger" onclick="deleteSubscription(${sub.id})">🗑️ Eliminar</button>
                         </div>
                     </div>`;
             }).join('');
