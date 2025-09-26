@@ -14,14 +14,12 @@ let data = {
 };
 
 // Utilidades
-function sha256Hex(text) {
-  return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-}
-
 async function hashPassword(password) {
-  const buf = await sha256Hex(password);
-  const bytes = new Uint8Array(buf);
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 // Endpoints de seguridad
