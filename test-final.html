@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Final</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .info { background: #d1ecf1; color: #0c5460; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .test-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #5a6fd8;
+        }
+        .data-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Final - Aplicación Completa</h1>
+        
+        <div id="status">
+            <div class="info">⏳ Verificando aplicación...</div>
+        </div>
+        
+        <h2>📱 Test de localStorage</h2>
+        <button class="test-button" onclick="testLocalStorage()">🔍 Ver Datos Locales</button>
+        <button class="test-button" onclick="addTestData()">➕ Agregar Datos de Prueba</button>
+        <button class="test-button" onclick="clearLocalData()">🗑️ Limpiar Datos</button>
+        <div id="localData" class="data-display"></div>
+        
+        <h2>☁️ Test de API</h2>
+        <button class="test-button" onclick="testAPI()">🔍 Probar API</button>
+        <button class="test-button" onclick="uploadToAPI()">📤 Subir a API</button>
+        <button class="test-button" onclick="downloadFromAPI()">📥 Bajar de API</button>
+        <div id="apiData" class="data-display"></div>
+        
+        <h2>🔄 Test de Sincronización</h2>
+        <button class="test-button" onclick="fullSyncTest()">🔄 Sincronización Completa</button>
+        <div id="syncData" class="data-display"></div>
+    </div>
+
+    <script>
+        // Funciones de localStorage
+        function getLocalData() {
+            return {
+                platforms: JSON.parse(localStorage.getItem('platforms') || '[]'),
+                subscriptions: JSON.parse(localStorage.getItem('subscriptions') || '[]')
+            };
+        }
+        
+        function setLocalData(data) {
+            localStorage.setItem('platforms', JSON.stringify(data.platforms));
+            localStorage.setItem('subscriptions', JSON.stringify(data.subscriptions));
+        }
+        
+        function testLocalStorage() {
+            const data = getLocalData();
+            document.getElementById('localData').textContent = JSON.stringify(data, null, 2);
+            updateStatus('✅ Datos locales mostrados', 'success');
+        }
+        
+        function addTestData() {
+            const testData = {
+                platforms: [
+                    { id: '1', name: 'NETFLIX', email: 'test@netflix.com', password: 'test123', profiles: '5' },
+                    { id: '2', name: 'DISNEY+', email: 'test@disney.com', password: 'test456', profiles: '4' }
+                ],
+                subscriptions: [
+                    { id: 1, platformId: '1', service: 'NETFLIX', accountEmail: 'test@netflix.com', accountPassword: 'test123', profileNumber: 1, pin: '1111', clientName: 'Cliente Test 1', startDate: '2024-01-01', endDate: '2024-01-31' },
+                    { id: 2, platformId: '2', service: 'DISNEY+', accountEmail: 'test@disney.com', accountPassword: 'test456', profileNumber: 2, pin: '2222', clientName: 'Cliente Test 2', startDate: '2024-01-01', endDate: '2024-01-31' }
+                ]
+            };
+            setLocalData(testData);
+            testLocalStorage();
+            updateStatus('✅ Datos de prueba agregados', 'success');
+        }
+        
+        function clearLocalData() {
+            localStorage.removeItem('platforms');
+            localStorage.removeItem('subscriptions');
+            testLocalStorage();
+            updateStatus('✅ Datos locales limpiados', 'success');
+        }
+        
+        // Funciones de API
+        async function testAPI() {
+            try {
+                const response = await fetch('/api/data');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('apiData').textContent = JSON.stringify(data, null, 2);
+                    updateStatus('✅ API funcionando correctamente', 'success');
+                } else {
+                    document.getElementById('apiData').textContent = `Error: ${response.status} - ${response.statusText}`;
+                    updateStatus('❌ API no responde correctamente', 'error');
+                }
+            } catch (error) {
+                document.getElementById('apiData').textContent = `Error: ${error.message}`;
+                updateStatus('❌ Error de conexión con API', 'error');
+            }
+        }
+        
+        async function uploadToAPI() {
+            const localData = getLocalData();
+            try {
+                const response = await fetch('/api/data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(localData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    document.getElementById('apiData').textContent = JSON.stringify(result, null, 2);
+                    updateStatus('✅ Datos subidos a API correctamente', 'success');
+                } else {
+                    updateStatus('❌ Error al subir datos a API', 'error');
+                }
+            } catch (error) {
+                updateStatus('❌ Error de conexión: ' + error.message, 'error');
+            }
+        }
+        
+        async function downloadFromAPI() {
+            try {
+                const response = await fetch('/api/data');
+                if (response.ok) {
+                    const data = await response.json();
+                    setLocalData(data);
+                    testLocalStorage();
+                    document.getElementById('apiData').textContent = JSON.stringify(data, null, 2);
+                    updateStatus('✅ Datos bajados de API correctamente', 'success');
+                } else {
+                    updateStatus('❌ Error al bajar datos de API', 'error');
+                }
+            } catch (error) {
+                updateStatus('❌ Error de conexión: ' + error.message, 'error');
+            }
+        }
+        
+        async function fullSyncTest() {
+            updateStatus('🔄 Iniciando test de sincronización completa...', 'info');
+            
+            try {
+                // 1. Subir datos locales a API
+                const localData = getLocalData();
+                const uploadResponse = await fetch('/api/data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(localData)
+                });
+                
+                if (uploadResponse.ok) {
+                    // 2. Descargar datos de API
+                    const downloadResponse = await fetch('/api/data');
+                    if (downloadResponse.ok) {
+                        const apiData = await downloadResponse.json();
+                        setLocalData(apiData);
+                        
+                        document.getElementById('syncData').textContent = JSON.stringify(apiData, null, 2);
+                        updateStatus('✅ Sincronización completa exitosa', 'success');
+                    } else {
+                        updateStatus('❌ Error al descargar datos de API', 'error');
+                    }
+                } else {
+                    updateStatus('❌ Error al subir datos a API', 'error');
+                }
+            } catch (error) {
+                updateStatus('❌ Error en sincronización: ' + error.message, 'error');
+            }
+        }
+        
+        function updateStatus(message, type) {
+            const status = document.getElementById('status');
+            status.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+        
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            testLocalStorage();
+            testAPI();
+            updateStatus('✅ Aplicación lista para pruebas', 'success');
+        });
+    </script>
+</body>
+</html>
