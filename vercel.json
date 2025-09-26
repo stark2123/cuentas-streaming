@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/data.js": {
-      "runtime": "nodejs18.x"
-    }
-  }
-}
