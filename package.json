@@ -1,0 +1,8 @@
+{
+  "name": "cuentas-streaming",
+  "version": "1.0.0",
+  "description": "Aplicación de gestión de cuentas de streaming",
+  "dependencies": {
+    "@vercel/kv": "^1.0.0"
+  }
+}

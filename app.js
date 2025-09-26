@@ -6,26 +6,47 @@ let editingId = null;
 let PLATFORMS = [];
 let activePlatformFilter = 'ALL';
 
-// ========== FUNCIONES DE DATOS ==========
-function loadData() {
+// ========== FUNCIONES DE BASE DE DATOS ==========
+async function loadData() {
     try {
-        PLATFORMS = JSON.parse(localStorage.getItem('platforms') || '[]');
-        subscriptions = JSON.parse(localStorage.getItem('subscriptions') || '[]');
-        console.log('✅ Datos cargados:', { platforms: PLATFORMS.length, subscriptions: subscriptions.length });
+        const response = await fetch('/api/data');
+        if (response.ok) {
+            const data = await response.json();
+            PLATFORMS = data.platforms || [];
+            subscriptions = data.subscriptions || [];
+            console.log('✅ Datos cargados de la base de datos:', { platforms: PLATFORMS.length, subscriptions: subscriptions.length });
+        } else {
+            console.log('❌ Error al cargar datos de la base de datos');
+            PLATFORMS = [];
+            subscriptions = [];
+        }
     } catch (error) {
-        console.log('❌ Error al cargar datos:', error);
+        console.log('❌ Error de conexión:', error);
         PLATFORMS = [];
         subscriptions = [];
     }
 }
 
-function saveData() {
+async function saveData() {
     try {
-        localStorage.setItem('platforms', JSON.stringify(PLATFORMS));
-        localStorage.setItem('subscriptions', JSON.stringify(subscriptions));
-        console.log('✅ Datos guardados');
+        const response = await fetch('/api/data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                platforms: PLATFORMS,
+                subscriptions: subscriptions
+            })
+        });
+        
+        if (response.ok) {
+            console.log('✅ Datos guardados en la base de datos');
+        } else {
+            console.log('❌ Error al guardar en la base de datos');
+        }
     } catch (error) {
-        console.log('❌ Error al guardar datos:', error);
+        console.log('❌ Error de conexión al guardar:', error);
     }
 }
 
@@ -501,8 +522,8 @@ async function saveSubscription() {
         alert('Suscripción creada correctamente');
     }
     
-    // Guardar datos
-    saveData();
+    // Guardar datos en la base de datos
+    await saveData();
     
     renderPlatformSubtabs();
     renderPlatforms();
@@ -526,8 +547,8 @@ async function savePlatform() {
     platformData.id = Date.now().toString();
     PLATFORMS.push(platformData);
     
-    // Guardar datos
-    saveData();
+    // Guardar datos en la base de datos
+    await saveData();
     
     closePlatformModal();
     renderPlatformSubtabs();
@@ -536,11 +557,11 @@ async function savePlatform() {
 }
 
 // ========== INICIALIZACIÓN ==========
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Aplicación iniciada');
     
-    // Cargar datos
-    loadData();
+    // Cargar datos de la base de datos
+    await loadData();
     
     // Si no hay datos, usar datos de ejemplo
     if (PLATFORMS.length === 0 && subscriptions.length === 0) {
@@ -548,7 +569,7 @@ document.addEventListener('DOMContentLoaded', function() {
             { id: '1', name: 'NETFLIX', email: 'ejemplo@netflix.com', password: 'password123', profiles: '5' }
         ];
         subscriptions = [];
-        saveData();
+        await saveData();
         console.log('📝 Usando datos de ejemplo');
     }
     
