@@ -120,6 +120,11 @@
             background: #6c757d;
             color: white;
         }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
 
         .btn-secondary:hover {
             background: #5a6268;
@@ -415,6 +420,12 @@
                 </button>
                 <button class="btn btn-warning" onclick="importData()">
                     📥 Importar
+                </button>
+                <button class="btn btn-primary" onclick="syncToCloud()">
+                    ☁️ Subir a la Nube
+                </button>
+                <button class="btn btn-secondary" onclick="syncFromCloud()">
+                    📥 Bajar de la Nube
                 </button>
                 <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="handleFileImport(event)">
             </div>

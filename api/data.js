@@ -1,8 +1,18 @@
-// Base de datos simple en memoria (se reinicia en cada deploy)
+// Base de datos simple en memoria con persistencia temporal
 let data = {
   platforms: [],
   subscriptions: []
 };
+
+// Función para obtener datos de ejemplo si no hay datos
+function getDefaultData() {
+  return {
+    platforms: [
+      { id: '1', name: 'NETFLIX', email: 'ejemplo@netflix.com', password: 'password123', profiles: '5' }
+    ],
+    subscriptions: []
+  };
+}
 
 export default function handler(req, res) {
   // Configurar CORS
@@ -28,10 +38,10 @@ export default function handler(req, res) {
     // Guardar datos
     const { platforms, subscriptions } = req.body;
     
-    if (platforms) {
+    if (platforms !== undefined) {
       data.platforms = platforms;
     }
-    if (subscriptions) {
+    if (subscriptions !== undefined) {
       data.subscriptions = subscriptions;
     }
     
