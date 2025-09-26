@@ -1,15 +1,13 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "server/index-simple.js",
-      "use": "@vercel/node"
+  "functions": {
+    "server/index-simple.js": {
+      "runtime": "nodejs18.x"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/server/index-simple.js"
+      "source": "/api/(.*)",
+      "destination": "/server/index-simple.js"
     }
   ]
 }
