@@ -1,23 +1,13 @@
-// Base de datos simple en memoria con persistencia temporal
+// Base de datos simple en memoria
 let data = {
   platforms: [],
   subscriptions: []
 };
 
-// Función para obtener datos de ejemplo si no hay datos
-function getDefaultData() {
-  return {
-    platforms: [
-      { id: '1', name: 'NETFLIX', email: 'ejemplo@netflix.com', password: 'password123', profiles: '5' }
-    ],
-    subscriptions: []
-  };
-}
-
 export default function handler(req, res) {
   // Configurar CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
@@ -26,7 +16,6 @@ export default function handler(req, res) {
   }
 
   if (req.method === 'GET') {
-    // Obtener todos los datos
     res.status(200).json({
       platforms: data.platforms,
       subscriptions: data.subscriptions
@@ -35,7 +24,6 @@ export default function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    // Guardar datos
     const { platforms, subscriptions } = req.body;
     
     if (platforms !== undefined) {
@@ -46,8 +34,7 @@ export default function handler(req, res) {
     }
     
     res.status(200).json({ 
-      success: true, 
-      message: 'Datos guardados correctamente',
+      success: true,
       platforms: data.platforms,
       subscriptions: data.subscriptions
     });

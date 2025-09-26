@@ -94,14 +94,14 @@ async function syncToCloud() {
         });
         
         if (response.ok) {
-            console.log('✅ Datos sincronizados a la nube');
+            alert('✅ Datos sincronizados a la nube');
             return true;
         } else {
-            console.log('❌ Error al sincronizar a la nube');
+            alert('❌ Error al sincronizar a la nube');
             return false;
         }
     } catch (error) {
-        console.log('❌ Error de conexión al sincronizar:', error);
+        alert('❌ Error de conexión: ' + error.message);
         return false;
     }
 }
@@ -113,14 +113,23 @@ async function syncFromCloud() {
             const data = await response.json();
             PLATFORMS = data.platforms || [];
             subscriptions = data.subscriptions || [];
-            console.log('✅ Datos sincronizados desde la nube');
+            
+            // Guardar localmente también
+            await saveDataToLocal();
+            
+            // Actualizar la interfaz
+            renderPlatformSubtabs();
+            renderPlatforms();
+            renderSubscriptions();
+            
+            alert('✅ Datos sincronizados desde la nube');
             return true;
         } else {
-            console.log('❌ Error al cargar desde la nube');
+            alert('❌ Error al cargar desde la nube');
             return false;
         }
     } catch (error) {
-        console.log('❌ Error de conexión al cargar:', error);
+        alert('❌ Error de conexión: ' + error.message);
         return false;
     }
 }
