@@ -4,6 +4,80 @@
 let subscriptions = [];
 let editingId = null;
 let PLATFORMS = [];
+let activePlatformFilter = 'ALL';
+let useCloudStorage = true; // Usar almacenamiento en la nube
+
+// ========== FUNCIONES DE API ==========
+async function loadDataFromCloud() {
+    try {
+        const response = await fetch('/api/data');
+        if (response.ok) {
+            const data = await response.json();
+            PLATFORMS = data.platforms || [];
+            subscriptions = data.subscriptions || [];
+            console.log('✅ Datos cargados desde la nube:', { platforms: PLATFORMS.length, subscriptions: subscriptions.length });
+            return true;
+        } else {
+            console.log('❌ Error al cargar datos de la nube');
+            return false;
+        }
+    } catch (error) {
+        console.log('❌ Error de conexión:', error);
+        return false;
+    }
+}
+
+async function saveDataToCloud() {
+    try {
+        const response = await fetch('/api/data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                platforms: PLATFORMS,
+                subscriptions: subscriptions
+            })
+        });
+        
+        if (response.ok) {
+            console.log('✅ Datos guardados en la nube');
+            return true;
+        } else {
+            console.log('❌ Error al guardar en la nube');
+            return false;
+        }
+    } catch (error) {
+        console.log('❌ Error de conexión al guardar:', error);
+        return false;
+    }
+}
+
+async function loadDataFromLocal() {
+    try {
+        const localPlatforms = JSON.parse(localStorage.getItem('platforms') || '[]');
+        const localSubscriptions = JSON.parse(localStorage.getItem('subscriptions') || '[]');
+        PLATFORMS = localPlatforms;
+        subscriptions = localSubscriptions;
+        console.log('✅ Datos cargados localmente:', { platforms: PLATFORMS.length, subscriptions: subscriptions.length });
+        return true;
+    } catch (error) {
+        console.log('❌ Error al cargar datos locales:', error);
+        return false;
+    }
+}
+
+async function saveDataToLocal() {
+    try {
+        localStorage.setItem('platforms', JSON.stringify(PLATFORMS));
+        localStorage.setItem('subscriptions', JSON.stringify(subscriptions));
+        console.log('✅ Datos guardados localmente');
+        return true;
+    } catch (error) {
+        console.log('❌ Error al guardar localmente:', error);
+        return false;
+    }
+}
 
 // ========== FUNCIONES BÁSICAS ==========
 function openPlatformModal() {
@@ -67,6 +141,10 @@ function closeModal() {
     editingId = null;
 }
 
+function closeProfilesModal() {
+    document.getElementById('profilesModal').style.display = 'none';
+}
+
 function updateAvailableProfiles() {
     const platformId = document.getElementById('platformSelect').value;
     const profileSelect = document.getElementById('profileNumber');
@@ -92,6 +170,31 @@ function updateAvailableProfiles() {
     }
 }
 
+// ========== SUBPESTAÑAS DE PLATAFORMAS ==========
+function renderPlatformSubtabs() {
+    const container = document.getElementById('platformsSubtabs');
+    if (!container) return;
+    
+    const names = Array.from(new Set(PLATFORMS.map(p => p.name))).sort();
+    const allTabs = ['Todos'].concat(names);
+    
+    if (activePlatformFilter !== 'ALL' && !names.includes(activePlatformFilter)) {
+        activePlatformFilter = 'ALL';
+    }
+    
+    container.innerHTML = allTabs.map(label => {
+        const key = label === 'Todos' ? 'ALL' : label;
+        const isActive = (activePlatformFilter === key);
+        return `<button class="subtab-button ${isActive ? 'active' : ''}" onclick="setPlatformFilter('${key}')">${label}</button>`;
+    }).join('');
+}
+
+function setPlatformFilter(key) {
+    activePlatformFilter = key;
+    renderPlatformSubtabs();
+    renderPlatforms();
+}
+
 // ========== RENDERIZADO ==========
 function renderPlatforms() {
     const container = document.getElementById('platformsList');
@@ -99,7 +202,13 @@ function renderPlatforms() {
         container.innerHTML = `<div class="empty-state"><h3>📺 No hay plataformas configuradas</h3><p>Agregá tu primera plataforma para comenzar</p></div>`;
         return;
     }
-    container.innerHTML = PLATFORMS.map(platform => {
+    
+    // Filtrar plataformas por la pestaña activa
+    const filteredPlatforms = PLATFORMS.filter(platform => 
+        activePlatformFilter === 'ALL' || platform.name === activePlatformFilter
+    );
+    
+    container.innerHTML = filteredPlatforms.map(platform => {
         const platformSubscriptions = subscriptions.filter(sub => sub.platformId === platform.id);
         const totalProfiles = parseInt(platform.profiles);
         const usedProfiles = platformSubscriptions.length;
@@ -122,6 +231,7 @@ function renderPlatforms() {
                 </div>
                 <div class="card-actions">
                     <button class="btn btn-primary" onclick="openAddModal('${platform.id}')">➕ Agregar Cliente</button>
+                    <button class="btn btn-success" onclick="viewProfiles('${platform.id}')">👥 Ver Perfiles (${usedProfiles})</button>
                     <button class="btn btn-secondary" onclick="editPlatform('${platform.id}')">✏️ Editar</button>
                     <button class="btn btn-danger" onclick="deletePlatform('${platform.id}')">🗑️ Eliminar</button>
                 </div>
@@ -229,10 +339,23 @@ function updatePlatform(platformId) {
     }
 }
 
-function deletePlatform(platformId) {
+async function deletePlatform(platformId) {
     if (confirm('¿Estás seguro de eliminar esta plataforma?')) {
         PLATFORMS = PLATFORMS.filter(p => p.id !== platformId);
         subscriptions = subscriptions.filter(sub => sub.platformId !== platformId);
+        
+        // Guardar en la nube
+        if (useCloudStorage) {
+            const saved = await saveDataToCloud();
+            if (!saved) {
+                await saveDataToLocal();
+                alert('⚠️ Guardado localmente (sin conexión a la nube)');
+            }
+        } else {
+            await saveDataToLocal();
+        }
+        
+        renderPlatformSubtabs();
         renderPlatforms();
         renderSubscriptions();
         alert('Plataforma eliminada correctamente');
@@ -257,9 +380,23 @@ function editSubscription(id) {
     document.getElementById('subscriptionModal').style.display = 'block';
 }
 
-function deleteSubscription(id) {
+async function deleteSubscription(id) {
     if (confirm('¿Estás seguro de eliminar esta suscripción?')) {
         subscriptions = subscriptions.filter(s => s.id !== id);
+        
+        // Guardar en la nube
+        if (useCloudStorage) {
+            const saved = await saveDataToCloud();
+            if (!saved) {
+                await saveDataToLocal();
+                alert('⚠️ Guardado localmente (sin conexión a la nube)');
+            }
+        } else {
+            await saveDataToLocal();
+        }
+        
+        renderPlatformSubtabs();
+        renderPlatforms();
         renderSubscriptions();
         alert('Suscripción eliminada correctamente');
     }
@@ -273,8 +410,67 @@ function sendWhatsApp(id) {
     window.open(url, '_blank');
 }
 
+function viewProfiles(platformId) {
+    const platform = PLATFORMS.find(p => p.id === platformId);
+    if (!platform) return;
+    
+    const platformSubscriptions = subscriptions.filter(sub => sub.platformId === platformId);
+    
+    document.getElementById('profilesModalTitle').textContent = `Perfiles Vendidos - ${platform.name}`;
+    document.getElementById('profilesModal').style.display = 'block';
+    
+    const container = document.getElementById('profilesList');
+    if (platformSubscriptions.length === 0) {
+        container.innerHTML = `<div class="empty-state"><h3>📋 No hay perfiles vendidos</h3><p>Esta plataforma no tiene clientes asignados</p></div>`;
+        return;
+    }
+    
+    container.innerHTML = platformSubscriptions.map(sub => {
+        const daysRemaining = calculateDaysRemaining(sub.endDate);
+        const daysClass = daysRemaining < 0 ? 'days-danger' : daysRemaining <= 3 ? 'days-warning' : 'days-positive';
+        return `
+            <div class="subscription-card">
+                <div class="card-header">
+                    <div class="service-name">Perfil ${sub.profileNumber} - ${sub.clientName}</div>
+                    <div class="days-badge ${daysClass}">${daysRemaining} días</div>
+                </div>
+                <div class="card-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Cliente</div>
+                        <div class="detail-value">${sub.clientName}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Correo</div>
+                        <div class="detail-value">${sub.accountEmail}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">PIN</div>
+                        <div class="detail-value">${sub.pin || 'No asignado'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Inicio</div>
+                        <div class="detail-value">${formatDate(sub.startDate)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Finaliza</div>
+                        <div class="detail-value">${formatDate(sub.endDate)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Estado</div>
+                        <div class="detail-value">${daysRemaining > 0 ? 'Activo' : 'Vencido'}</div>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-primary" onclick="editSubscription(${sub.id})">✏️ Editar</button>
+                    <button class="btn btn-success" onclick="sendWhatsApp(${sub.id})">📱 WhatsApp</button>
+                    <button class="btn btn-danger" onclick="deleteSubscription(${sub.id})">🗑️ Eliminar</button>
+                </div>
+            </div>`;
+    }).join('');
+}
+
 // ========== GUARDADO DE DATOS ==========
-function saveSubscription() {
+async function saveSubscription() {
     const platformId = document.getElementById('platformSelect').value;
     const platform = PLATFORMS.find(p => p.id === platformId);
     if (!platform) { alert('Selecciona una plataforma'); return; }
@@ -301,12 +497,25 @@ function saveSubscription() {
         alert('Suscripción creada correctamente');
     }
     
+    // Guardar en la nube
+    if (useCloudStorage) {
+        const saved = await saveDataToCloud();
+        if (!saved) {
+            // Si falla la nube, guardar localmente como respaldo
+            await saveDataToLocal();
+            alert('⚠️ Guardado localmente (sin conexión a la nube)');
+        }
+    } else {
+        await saveDataToLocal();
+    }
+    
+    renderPlatformSubtabs();
     renderPlatforms();
     renderSubscriptions();
     closeModal();
 }
 
-function savePlatform() {
+async function savePlatform() {
     const platformData = {
         name: document.getElementById('platformName').value,
         email: document.getElementById('platformEmail').value,
@@ -321,22 +530,51 @@ function savePlatform() {
     
     platformData.id = Date.now().toString();
     PLATFORMS.push(platformData);
+    
+    // Guardar en la nube
+    if (useCloudStorage) {
+        const saved = await saveDataToCloud();
+        if (!saved) {
+            // Si falla la nube, guardar localmente como respaldo
+            await saveDataToLocal();
+            alert('⚠️ Guardado localmente (sin conexión a la nube)');
+        }
+    } else {
+        await saveDataToLocal();
+    }
+    
     closePlatformModal();
+    renderPlatformSubtabs();
     renderPlatforms();
     alert('Plataforma agregada correctamente');
 }
 
 // ========== INICIALIZACIÓN ==========
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Aplicación iniciada');
     
-    // Cargar datos de ejemplo
-    PLATFORMS = [
-        { id: '1', name: 'NETFLIX', email: 'ejemplo@netflix.com', password: 'password123', profiles: '5' }
-    ];
-    subscriptions = [];
+    // Intentar cargar datos de la nube
+    let dataLoaded = false;
+    if (useCloudStorage) {
+        dataLoaded = await loadDataFromCloud();
+    }
+    
+    // Si no se pudieron cargar de la nube, cargar localmente
+    if (!dataLoaded) {
+        await loadDataFromLocal();
+    }
+    
+    // Si no hay datos en ningún lado, usar datos de ejemplo
+    if (PLATFORMS.length === 0 && subscriptions.length === 0) {
+        PLATFORMS = [
+            { id: '1', name: 'NETFLIX', email: 'ejemplo@netflix.com', password: 'password123', profiles: '5' }
+        ];
+        subscriptions = [];
+        console.log('📝 Usando datos de ejemplo');
+    }
     
     // Renderizar contenido
+    renderPlatformSubtabs();
     renderPlatforms();
     renderSubscriptions();
     
@@ -447,6 +685,8 @@ document.addEventListener('DOMContentLoaded', function() {
 window.onclick = function(event) {
     const modal = document.getElementById('subscriptionModal');
     const platformModal = document.getElementById('platformModal');
+    const profilesModal = document.getElementById('profilesModal');
     if (event.target === modal) closeModal();
     if (event.target === platformModal) closePlatformModal();
+    if (event.target === profilesModal) closeProfilesModal();
 };
