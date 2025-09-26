@@ -29,53 +29,58 @@ function saveData() {
     }
 }
 
-// ========== FUNCIONES DE SINCRONIZACIÓN ==========
-async function syncToCloud() {
-    try {
-        const response = await fetch('/api/data', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                platforms: PLATFORMS,
-                subscriptions: subscriptions
-            })
-        });
-        
-        if (response.ok) {
-            alert('✅ Datos sincronizados a la nube');
-        } else {
-            alert('❌ Error al sincronizar a la nube');
-        }
-    } catch (error) {
-        alert('❌ Error de conexión: ' + error.message);
-    }
+// ========== FUNCIONES DE EXPORTAR/IMPORTAR ==========
+function exportData() {
+    const data = {
+        platforms: PLATFORMS,
+        subscriptions: subscriptions,
+        exportDate: new Date().toISOString()
+    };
+    
+    const dataStr = JSON.stringify(data, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cuentas-streaming-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    URL.revokeObjectURL(url);
+    alert('✅ Datos exportados correctamente');
 }
 
-async function syncFromCloud() {
-    try {
-        const response = await fetch('/api/data');
-        if (response.ok) {
-            const data = await response.json();
-            PLATFORMS = data.platforms || [];
-            subscriptions = data.subscriptions || [];
+function importData() {
+    document.getElementById('fileInput').click();
+}
+
+function handleFileImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
             
-            // Guardar localmente
-            saveData();
-            
-            // Actualizar la interfaz
-            renderPlatformSubtabs();
-            renderPlatforms();
-            renderSubscriptions();
-            
-            alert('✅ Datos sincronizados desde la nube');
-        } else {
-            alert('❌ Error al cargar desde la nube');
+            if (data.platforms && data.subscriptions) {
+                PLATFORMS = data.platforms;
+                subscriptions = data.subscriptions;
+                saveData();
+                
+                renderPlatformSubtabs();
+                renderPlatforms();
+                renderSubscriptions();
+                
+                alert('✅ Datos importados correctamente');
+            } else {
+                alert('❌ Archivo no válido');
+            }
+        } catch (error) {
+            alert('❌ Error al leer el archivo: ' + error.message);
         }
-    } catch (error) {
-        alert('❌ Error de conexión: ' + error.message);
-    }
+    };
+    reader.readAsText(file);
 }
 
 // ========== FUNCIONES BÁSICAS ==========
